@@ -126,8 +126,10 @@ void fileread(int itask, char *fname, KeyValue *kv, void *ptr)
   char *text = new char[filesize+1];
   int nchar = fread(text,1,filesize,fp);
   text[nchar] = '\0';
-  fclose(fp);
-
+  fclose(fp) ;
+  //Harish Testing
+D
+  //Testing
   //char *whitespace = " \t\n\f\r\0";
   char *whitespace = "\n";
   char *word = strtok(text,whitespace);
