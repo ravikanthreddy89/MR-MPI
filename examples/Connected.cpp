@@ -75,10 +75,12 @@ int main(int narg, char **args)
   mr->collate(NULL);
   int nunique = mr->reduce(sum,NULL);
   //extra rounds  
-  for(int i=0;i<100;i++)
+  int  local_result=0,global_result=1;
+  while(global_result!=0)
 	{
 		mr->collate(NULL);
-		mr->reduce(sum,NULL);
+		mr->reduce(sum,(void*)&local_result);
+		MPI_Allreduce(&local_result,&global_result,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
 	}
   //
   MPI_Barrier(MPI_COMM_WORLD);
@@ -88,20 +90,8 @@ int main(int narg, char **args)
 
   //mr->sort_values(&ncompare);
 
-  Count count;
- /* count.n = 0;
-  count.limit = 10;
-  count.flag = 0;
-  mr->map(mr,output,&count);
-  
-  mr->gather(1);
-  mr->sort_values(ncompare);
-   */
-  count.n = 0;
-  count.limit = 10;
-  count.flag = 1;
-  mr->map(mr,output,&count);
-
+  mr->map(mr,output,&me);
+  MPI_Barrier(MPI_COMM_WORLD);
   delete mr;
 
   if (me == 0) {
@@ -119,7 +109,7 @@ int main(int narg, char **args)
 ------------------------------------------------------------------------- */
 void fileread(int itask, char *fname, KeyValue *kv, void *ptr)
 {
-  // filesize = # of bytes in file
+	
 
   struct stat stbuf;
   int flag = stat(fname,&stbuf);
@@ -172,6 +162,9 @@ void sum(char *key, int keybytes, char *multivalue,
 	long k=*(long *)key;
 	long *head=(long *)multivalue;
 	std::string state="none";
+	//int *local_state=(int*)ptr;
+	ptr=malloc(sizeof(int));
+	int *local_state=(int*)ptr;
    /*
    long min=head[0];
    long max=head[0];
@@ -197,10 +190,21 @@ void sum(char *key, int keybytes, char *multivalue,
 	long min=head[0];
 	long max=head[cur];	
 	/* decide the state of the vertex */
-	if(k<min) state="LM";
-	else if(k>max) state="OM";
-	else state="SM";
-
+	if(k<min) 
+	{
+	state="LM";
+	*local_state=0;
+	}
+	else if(k>max) 
+	{
+	state="OM";
+	*local_state=1;
+	}
+	else
+	{ 
+	state="SM";
+	*local_state=1;
+	}
 	/* local_max state */
 	if(state.compare("LM")==0)
 	{
@@ -254,14 +258,11 @@ int ncompare(const void *p1,const void *p2)
 void output(uint64_t itask, char *key, int keybytes, char *value,
 	    int valuebytes, KeyValue *kv, void *ptr)
 {
-  Count *count = (Count *) ptr;
-  count->n++;
-  //if (count->n > count->limit) return;
 
  // int n = *(int *) value;
   long k=*((long *)key);
   long v=*((long *)value);
-  printf("%ld %ld\n",k,v);
+  printf("%ld %ld rank:%d\n",k,v,*(int*)ptr);
 
  //if (count->flag) printf("%s %ld\n",value,k);
 // else kv->add(key,keybytes,(char *) &n,sizeof(int));
