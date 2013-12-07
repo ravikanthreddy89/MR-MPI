@@ -47,6 +47,7 @@ struct Count {
   int n,limit,flag;
 };
 
+  int  local_result=1,global_result=1;
 /* ---------------------------------------------------------------------- */
 
 int main(int narg, char **args)
@@ -73,28 +74,32 @@ int main(int narg, char **args)
   
   
   //int nwords = mr->map(narg-1,&args[1],0,1,0,fileread,NULL);
-  int words= mr->map(1,1,(char **)&args[1],0,0,'\n',80,unity,NULL);
+  int words= mr->map(nprocs,1,(char **)&args[1],0,0,'\n',80,unity,NULL);
   printf("break point 1\n");
 
   int nfiles = mr->mapfilecount;
   mr->collate(NULL);
-  int nunique = mr->reduce(sum,NULL);
-  //extra rounds  
-  int  local_result=0,global_result=1;
+  int nunique = mr->reduce(sum,(void *)&local_result);
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  //extra rounds
+  int iterations=0;  
   while(global_result!=0)
 	{
+		iterations=iterations+1;
 		mr->collate(NULL);
-		mr->reduce(sum,(void*)&local_result);
+		mr->reduce(sum,(void *)&local_result);
 		MPI_Allreduce(&local_result,&global_result,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
+	//	MPI_Barrier(MPI_COMM_WORLD);
 	}
   //
   MPI_Barrier(MPI_COMM_WORLD);
-  
+  printf("Number of iterations %d \n",iterations);
   
   double tstop = MPI_Wtime();
 
   //mr->sort_values(&ncompare);
-  mr->map(mr,output,&me);
+  mr->map(mr,output,(void *)&me);
   MPI_Barrier(MPI_COMM_WORLD);
   delete mr;
 
@@ -186,9 +191,9 @@ void sum(char *key, int keybytes, char *multivalue,
 	long k=*(long *)key;
 	long *head=(long *)multivalue;
 	std::string state="none";
-	//int *local_state=(int*)ptr;
-	ptr=malloc(sizeof(int));
 	int *local_state=(int*)ptr;
+	//ptr=malloc(sizeof(int));
+	//int *local_state=(int*)ptr;
    /*
    long min=head[0];
    long max=head[0];
@@ -286,7 +291,7 @@ void output(uint64_t itask, char *key, int keybytes, char *value,
  // int n = *(int *) value;
   long k=*((long *)key);
   long v=*((long *)value);
-  printf("%ld %ld rank:%d\n",k,v,*(int*)ptr);
+  printf("%ld %ld rank:%d\n",k,v,*((int *)ptr));
 
  //if (count->flag) printf("%s %ld\n",value,k);
 // else kv->add(key,keybytes,(char *) &n,sizeof(int));
