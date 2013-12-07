@@ -38,6 +38,7 @@
 using namespace MAPREDUCE_NS;
 
 void fileread(int, char *, KeyValue *, void *);
+void unity(int, char *, int,KeyValue *, void *);
 void sum(char *, int, char *, int, int *, KeyValue *, void *);
 int ncompare(const void *,const void *);
 void output(uint64_t, char *, int, char *, int, KeyValue *, void *);
@@ -62,7 +63,7 @@ int main(int narg, char **args)
   }
 
   MapReduce *mr = new MapReduce(MPI_COMM_WORLD);
-  mr->verbosity = 2;
+  mr->verbosity = 0;
   mr->timer = 1;
   //mr->memsize = 1;
   //mr->outofcore = 1;
@@ -70,7 +71,8 @@ int main(int narg, char **args)
   MPI_Barrier(MPI_COMM_WORLD);
   double tstart = MPI_Wtime();
 
-  int nwords = mr->map(narg-1,&args[1],0,1,0,fileread,NULL);
+  //int nwords = mr->map(narg-1,&args[1],0,1,0,fileread,NULL);
+  int words= mr->map(1,1,(char **)args[1],0,0,'\n',80,unity,(void *)NULL);
   int nfiles = mr->mapfilecount;
   mr->collate(NULL);
   int nunique = mr->reduce(sum,NULL);
@@ -89,7 +91,6 @@ int main(int narg, char **args)
   double tstop = MPI_Wtime();
 
   //mr->sort_values(&ncompare);
-
   mr->map(mr,output,&me);
   MPI_Barrier(MPI_COMM_WORLD);
   delete mr;
@@ -107,10 +108,29 @@ int main(int narg, char **args)
    read a file
    for each word in file, emit key = word, value = NULL
 ------------------------------------------------------------------------- */
+void unity (int itask, char *ftext,int len, KeyValue *kv, void *ptr)
+{
+	char *whitespace = "\n";
+	char *word = strtok(ftext,whitespace);
+ 	while (word) 
+	{
+   		//create string stream on the text
+   		std:: stringstream strstr(word);
+		// create a iterator on the string stream to iterate using tabs or white spaces
+   		std:: istream_iterator<std::string> it(strstr);
+                std:: istream_iterator<std::string> end;
+               // dump the values into a container
+                std:: vector<std::string> results(it, end);
+                long key=atol((const char *)results[0].c_str());
+                long value=atol((const char *)results[1].c_str());
+                kv->add((char *)&key, (int)sizeof(key), (char *)&value, (int)sizeof(value));
+                kv->add((char *)&value,(int)sizeof(value),(char*)&key,(int)sizeof(key));
+                word = strtok(NULL,whitespace);
+
+	}
+}
 void fileread(int itask, char *fname, KeyValue *kv, void *ptr)
 {
-	
-
   struct stat stbuf;
   int flag = stat(fname,&stbuf);
   if (flag < 0) {
@@ -270,3 +290,19 @@ void output(uint64_t itask, char *key, int keybytes, char *value,
   //if(count->flag)printf("%s %s\n",key, value);
   //else kv->add(key,keybytes,value,sizeof(int));
 }
+void output1(uint64_t itask, char *key, int keybytes, char *value,
+            int valuebytes, KeyValue *kv, void *ptr)
+{
+
+ // int n = *(int *) value;
+   long k=*((long *)key);
+   long v=*((long *)value);
+   fprintf((FILE*)ptr,"%ld %ld",k,v);
+ //
+ //        //if (count->flag) printf("%s %ld\n",value,k);
+ //        // else kv->add(key,keybytes,(char *) &n,sizeof(int));
+ //
+ //          //if(count->flag)printf("%s %s\n",key, value);
+ //            //else kv->add(key,keybytes,value,sizeof(int));
+}
+ 
