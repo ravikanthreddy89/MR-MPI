@@ -70,9 +70,12 @@ int main(int narg, char **args)
 
   MPI_Barrier(MPI_COMM_WORLD);
   double tstart = MPI_Wtime();
-
+  
+  
   //int nwords = mr->map(narg-1,&args[1],0,1,0,fileread,NULL);
-  int words= mr->map(1,1,(char **)args[1],0,0,'\n',80,unity,(void *)NULL);
+  int words= mr->map(1,1,(char **)&args[1],0,0,'\n',80,unity,NULL);
+  printf("break point 1\n");
+
   int nfiles = mr->mapfilecount;
   mr->collate(NULL);
   int nunique = mr->reduce(sum,NULL);
@@ -110,9 +113,10 @@ int main(int narg, char **args)
 ------------------------------------------------------------------------- */
 void unity (int itask, char *ftext,int len, KeyValue *kv, void *ptr)
 {
+        
 	char *whitespace = "\n";
-	char *word = strtok(ftext,whitespace);
- 	while (word) 
+ 	char *word = strtok(ftext,whitespace);
+ 	while (word!=NULL) 
 	{
    		//create string stream on the text
    		std:: stringstream strstr(word);
