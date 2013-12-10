@@ -1,10 +1,10 @@
 #!/bin/sh
 #SBATCH --partition=debug
 #SBATCH --time=00:15:00
-#SBATCH --nodes=2
+#SBATCH --nodes=4
 #SBATCH --ntasks-per-node=1
-#SBATCH --constraint=CPU-L5520
-#SBATCH --job-name="hello_test"
+##SBATCH --constraint=CPU-L5520
+#SBATCH --job-name="Sharringan"
 #SBATCH --output=test-srun.out
 #SBATCH --mail-user=rgudipat@buffalo.edu
 #SBATCH --mail-type=ALL
@@ -31,7 +31,7 @@ NPROCS=`srun --nodes=${SLURM_NNODES} bash -c 'hostname' |wc -l`
 echo NPROCS=$NPROCS
 export I_MPI_PMI_LIBRARY=/usr/lib64/libpmi.so
 ##srun -n $NPROCS ./Connected ./dblp.txt
-mpirun -np 2 ./Connected ./dblp.txt
+mpirun -np 4 ./Connected ./dblp.txt
 
 #
 echo "All Done!"
